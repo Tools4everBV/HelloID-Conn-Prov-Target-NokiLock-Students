@@ -23,12 +23,16 @@
     - [Correlation configuration](#correlation-configuration)
     - [Field mapping](#field-mapping)
     - [Account Reference](#account-reference)
+    - [Scope](#scope)
   - [Remarks](#remarks)
+    - [`getUsers`](#getusers)
+    - [Reboarding](#reboarding)
     - [Number](#number)
     - [CardID](#cardid)
     - [UserID or: `id`](#userid-or-id)
     - [Role](#role)
     - [CustomerID / CustomerName](#customerid--customername)
+    - [Concurrent sessions](#concurrent-sessions)
   - [Development resources](#development-resources)
     - [API endpoints](#api-endpoints)
     - [API documentation](#api-documentation)
@@ -102,7 +106,37 @@ The field mapping can be imported by using the _fieldMapping.json_ file.
 
 The account reference is populated with the property `cardID` property.
 
+### Scope
+
+The _NokiLock_ connector exclusively manages user accounts. Cards and authorizations are not supported.
+
 ## Remarks
+
+### `getUsers`
+
+To validate whether an account exists within _NokiLock_, the `getUsers` SOAP action is used. This action optionally accepts a filter to narrow the results based on a specific _`cardID`_.
+
+> [!NOTE]
+> The filter exclusively supports the _`cardID`_ attribute. The value of the _`cardID`_ corresponds to the _externalId_.
+>
+
+```powershell
+$splatParams = @{
+    Uri        = "$($actionContext.Configuration.BaseUrl)/rpc/xml/getUsers"
+    Method     = 'GET'
+    Headers    = @{'Content-Type' = 'application/x-www-form-urlencoded' }
+    Body       = @{ "customerID" = $($actionContext.Configuration.CustomerID); "$correlationField" = "$correlationValue" }
+    WebSession = $sessionContext.Session
+}
+$response = Invoke-RestMethod @splatParams -Verbose:$false
+```
+
+### Reboarding
+
+If a user account is removed using the _delete_ lifecycle action, it will be permanently deleted from _NokiLock_. As a result, a reboard will always result in a new account.
+
+> [!NOTE]
+> Even after the user account has been deleted, the associated _`cardID`_ will remain present within _NokiLock_. Keep in mind that its value is the 'externalId'.
 
 ### Number
 
@@ -114,7 +148,7 @@ The `cardID` property corresponds to the person's `externalId` and must include 
 
 ### UserID or: `id`
 
-The _modifyUser_ action requires the `userID` to be present in the update body. The value should be the `id` of the user account within _NokiLock_.
+Both the _modifyUser_ and _removeUser_ SOAP actions, require the `userID` to be present in the update body. The value should be the `id` of the user account within _NokiLock_.
 
 ### Role
 
@@ -282,6 +316,12 @@ finally {
 
 Version _1.0.0_ of the connector supports only **1** customer. If your implementation requires handling multiple customers, changes to the code will be necessary.
 
+### Concurrent sessions
+
+_NokiLock_ uses a __login__ and __logout__ SOAP action. The __logout__ function will __only__ terminate the session created during the currently running lifecycle action. It does not affect any other active sessions, even if they were initiated using the same credentials.
+
+This indicates that session concurrency does not appear to be necessary.
+
 ## Development resources
 
 ### API endpoints
@@ -293,6 +333,7 @@ The following endpoints are used by the connector
 | /rpc/xml/getUser    | Retrieve user information |
 | /rpc/xml/addUser    | Add new user user         |
 | /rpc/xml/modifyUser | Modify existing user      |
+| /rpc/xml/removeUser | Remove existing user      |
 
 ### API documentation
 
