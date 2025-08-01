@@ -138,23 +138,6 @@
       ]
     },
     {
-      "Name": "group",
-      "Description": "",
-      "Type": "Text",
-      "MappingActions": [
-        {
-          "MapForActions": [
-            "Create",
-            "Update"
-          ],
-          "MappingMode": "Field",
-          "Value": "\"Person.PrimaryContract.Department.DisplayName\"",
-          "UsedInNotifications": false,
-          "StoreInAccountData": false
-        }
-      ]
-    },
-    {
       "Name": "unfixedLockerLeaseTime",
       "Description": "",
       "Type": "Text",
